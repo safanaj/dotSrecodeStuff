@@ -1,0 +1,26 @@
+set mode "debian-control-mode"
+set priority "50"
+
+context file
+
+prompt AUTHOR "Maintainer Name: "
+prompt EMAIL"Maintainer Email: "
+prompt PKG "Package Name: "
+prompt DESC "Description: " default "some details"
+
+template debiancontrol :blank :file :user :time
+""
+----
+Source: {{?PKG}}
+Section: unknown
+Maintainer: {{?AUTHOR}} <{{?EMAIL}}>
+Build-Depends: autotools-dev, debhelper (>= 7)
+
+Package: {{PKG}}
+Section: unknown
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: {{?DESC}}
+
+----
+;;bind "c"

@@ -1,0 +1,90 @@
+set mode "c-mode"
+set priority "40"
+set escape_start "$"
+set escape_end "$"
+set comment_start  "/*"
+set comment_end    " */"
+set comment_prefix " *"
+set DOLLAR "$"
+set HEADEREXT ".h"
+context classdecl
+
+prompt P "Prefix-part Name for GType: " defaultmacro "GTYPE_PREFIX"
+prompt O "Object-part Name for GType: " defaultmacro "GTYPE_SUFFIX"
+prompt TNAME "Instance struct for GType: " defaultmacro "GTYPENAME"
+prompt TNAMECLASS "Class struct for GType: " defaultmacro "GTYPENAME" "Class"
+prompt BASEOBJECT "Parent Instance type: " default "GObject"
+prompt BASECLASS "Parent Class type: " default "GObjectClass"
+
+template symbols-gtype :blank :indent :glib
+""
+----
+#define $?P:upcase$_TYPE_$?O:upcase$              ($P:downcase$_$O:downcase$_get_type ())
+#define $P:upcase$_$O:upcase$(o)            (G_TYPE_CHECK_INSTANCE_CAST ((o), \
+					     $P:upcase$_TYPE_$O:upcase$, $P:capitalize$$O:capitalize$))
+#define $P:upcase$_IS_$O:upcase$(o)         (G_TYPE_CHECK_INSTANCE_TYPE ((o), \
+					     $P:upcase$_TYPE_$O:upcase$))
+#define $P:upcase$_$O:upcase$_CLASS(k)      (G_TYPE_CHECK_CLASS_CAST ((k), \
+					     $P:upcase$_TYPE_$O:upcase$, $P:capitalize$$O:capitalize$Class))
+#define $P:upcase$_IS_$O:upcase$_CLASS(k)   (G_TYPE_CHECK_CLASS_TYPE ((k), \
+					     $P:upcase$_TYPE_$O:upcase$))
+#define $P:upcase$_$O:upcase$_GET_CLASS(o)  (G_TYPE_INSTANCE_GET_CLASS ((o), \
+					     $P:upcase$_TYPE_$O:upcase$, $P:capitalize$$O:capitalize$Class))
+----
+
+template objectclass-gtype :blank :indent :glib
+""
+sectiondictionary "A"
+set NAME macro "^"
+----
+$<A:declaration:typestructu$$?TNAME$$/A$	
+$<A:declaration:typestructu$$?TNAMECLASS$$/A$
+
+----
+
+template structobject :blank :indent :glib
+""
+sectiondictionary "A"
+set NAME macro "TNAME"
+sectiondictionary "HAVEBODY"
+set BODY macro "^"
+sectiondictionary "PARENTS"
+set GTYPEPARENT macro "?BASEOBJECT"
+----
+$<A:declaration:instance$$BODY$$/A$
+----
+
+template structclass :blank :indent :glib
+""
+sectiondictionary "A"
+set UNAME macro "?P:capitalize" macro "?O:capitalize"
+set NAME macro "TNAMECLASS"
+sectiondictionary "HAVEBODY"
+set BODY macro "^"
+sectiondictionary "PARENTS"
+set GTYPEPARENT macro "?BASECLASS"
+----
+$<A:declaration:gstructu$$BOBY$$/A$
+----
+
+template gtype :indent :blank :glib
+""
+sectiondictionary "A"
+set NAME macro "?P:capitalize" macro "?O:capitalize"
+----
+
+$<A:classdecl:symbols-gtype$$?P$$?O$$/A$
+
+$<A:classdecl:objectclass-gtype$$P$$O$$/A$
+
+$>:classdecl:structobject$
+
+$>:classdecl:structclass$
+
+----
+bind "g"
+
+
+context declaration
+
+;; template gtypestructs :blank :indent

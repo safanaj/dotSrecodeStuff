@@ -1,0 +1,217 @@
+;; c.srt --- 
+;;
+;; Copyright (C) 2009 Marco <Bj> Bardelli
+;;
+;; Author: Marco <Bj> Bardelli <bardelli.marco@gmail.com>
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or (at
+;; your option) any later version.
+
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program; see the file COPYING.  If not, write to
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
+set mode "c-mode"
+set escape_start "$"
+set escape_end "$"
+set priority "51"
+set comment_start  "/*"
+set comment_end    " */"
+set comment_prefix " *"
+set DOLLAR "$"
+set TAB "\t"
+
+set HEADEREXT ".h"
+
+context misc
+
+template arglist
+"Insert an argument list for a function.
+@todo - Support smart CR in a buffer for not too long lines."
+----
+($#ARGS$$TYPE$ $NAME$$#NOTLAST$,$/NOTLAST$$/ARGS$)
+----
+
+template define :blank
+""
+----
+#define $?NAME$ $^$
+----
+
+template gnusource :blank
+"Say that this is _GNU_SOURCE."
+----
+#define _GNU_SOURCE
+----
+
+template header_guard :blank :file :time :user :cpp :glib
+"Put header gueard based on file name"
+----
+#ifndef __$FILENAME_SYMBOL:upcase$__
+#define __$FILENAME_SYMBOL:upcase$__ 1
+
+$^$
+
+#endif /* __$FILENAME_SYMBOL:upcase$__ */
+----
+
+context include
+
+template system
+"Include between <>."
+----
+#include <$^$>
+----
+bind "is"
+
+template local
+"Include between <>."
+----
+#include "$^$"
+----
+bind "il"
+
+template posix
+"Include standard posix headers."
+----
+$<A:system$stdio.h$/A$
+$<A:system$stdlib.h$/A$
+$<A:system$unistd.h$/A$
+$<A:system$error.h$/A$
+$<A:system$assert.h$/A$
+$<A:system$string.h$/A$
+$<A:system$strings.h$/A$
+----
+
+context declaration
+
+template typestructu :blank :indent
+""
+----
+typedef struct _$?NAME$$TAB$$TAB$$?NAME$;
+----
+
+template structu :indent :blank
+"A struct definition."
+----
+$#HAVEMODS$$MODIFIERS$$/HAVEMODS$struct _$?NAME$$#HAVEBODY$
+{$BODY$}$/HAVEBODY$;
+----
+
+template struct :indent :blank
+"A struct definition."
+----
+$#HAVEMODS$$MODIFIERS$$/HAVEMODS$struct $?NAME$ {
+$^$
+};
+----
+bind "o"
+
+
+template gfunction :indent :blank
+"Template to declare a function."
+----
+$#HAVEMODS$$MODIFIERS$$/HAVEMODS$$?TYPE$
+$?NAME$ $>:misc:arglist$$#HAVEBODY$
+{
+  $^$\n
+}
+$/HAVEBODY$
+----
+bind "f"
+
+prompt TYPE "Data Type: "
+
+template variable :indent :blank
+""
+----
+$#HAVEMODS$$MODIFIERS$$/HAVEMODS$$?TYPE$ $?NAME$$#HAVEDEFAULT$ = $DEFAULT$$/HAVEDEFAULT$;
+----
+bind "v"
+
+template externvariable :indent :blank
+""
+sectiondictionary "HAVEMODS"
+set MODIFIERS "extern "
+----
+$>:variable$
+----
+bind "ev"
+
+template staticvariable :indent :blank
+""
+sectiondictionary "HAVEMODS"
+set MODIFIERS "static "
+----
+$>:variable$
+----
+bind "sv"
+
+prompt TYPE "Return Type: "
+
+template function-proto :blank
+""
+----
+$?TYPE$ $?NAME$ $>:misc:arglist$;
+----
+bind "pf"
+
+template function :blank
+""
+----
+$?TYPE$ $?NAME$ $>:misc:arglist$
+{
+  $^$
+}
+----
+bind "f"
+
+template externfunction :blank
+""
+----
+extern $?TYPE$ $?NAME$ $>:misc:arglist$;
+----
+bind "ef"
+
+template externfunction-proto :blank
+""
+----
+$?TYPE$ $?NAME$ $>:misc:arglist$;
+----
+bind "pef"
+
+template staticfunction :blank
+""
+----
+static $?TYPE$ $?NAME$ $>:misc:arglist$
+{
+  $^$
+}
+----
+bind "sf"
+
+context file
+
+template empty :user :time :file :blank :cpp
+"Fill out an empty file."
+----
+$>:filecomment$
+
+$#NOTHEADER$
+$^$
+$/NOTHEADER$
+$#HEADER$
+$>:header_guard$
+$/HEADER$
+----
+bind "e"
+
+;; end

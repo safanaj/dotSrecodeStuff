@@ -1,0 +1,20 @@
+set mode "debian-changelog-mode"
+set priority "50"
+
+context file
+
+prompt PKGNAME "Package Name: "
+prompt PKGVER "Package Version: "
+
+template debianchangelog :blank :file :user :time
+""
+----
+{{?PKGNAME}} ({{?PKGVER}}) unstable; urgency=low
+
+  * {{^}}
+
+ --
+
+----
+;;bind "c"
+

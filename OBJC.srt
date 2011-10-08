@@ -1,0 +1,120 @@
+;; C.srt --- My Obj-C temp
+
+;; Copyright (C) 2008 Marco <Bj> Bardelli
+
+;; Author: Marco <Bj> Bardelli <bardelli.marco@gmail.com>
+
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or (at
+;; your option) any later version.
+
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program; see the file COPYING.  If not, write to
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
+set mode "objc-mode"
+set comment_start  "/**"
+set comment_end    " */"
+set comment_prefix " *"
+
+set priority "40"
+
+set HEADEREXT ".h"
+
+context file
+
+template empty :file :user :time :objc
+"Fill out an empty file."
+----
+{{>:filecomment}}
+
+{{#NOTHEADER}}
+{{^}}
+{{/NOTHEADER}}
+{{#HEADER}}
+{{>:header_guard}}
+{{/HEADER}}
+----
+bind "e"
+
+template header_guard :file :blank
+----
+#ifndef __{{FILENAME_SYMBOL:upcase}}__
+#define __{{FILENAME_SYMBOL:upcase}}__ 1
+
+{{^}}
+
+#endif /* __{{FILENAME_SYMBOL:upcase}}__ */
+----
+
+context misc
+template include :blank
+"An include statement."
+----
+#include <{{?NAME}}>
+----
+bind "r"
+
+template gnu_source :blank
+"Say that this is _GNU_SOURCE."
+----
+#define _GNU_SOURCE
+----
+bind "G"
+
+template posix_includes :blank
+"."
+----
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <error.h>
+#include <assert.h>
+----
+
+
+context declaration
+;;; @todo protocols
+prompt NAME_INTERFACE "Name for Class Interface: "
+prompt NAME_IMPLEMENTATION "Name for Class Implementation: "
+prompt CLASS_CATEGORY "Name for Class Category: "
+prompt PARENT "Name for Parent Class: " default "Object"
+template interface :blank :indent
+"Template to declare a class."
+----
+@interface {{?NAME}} : {{?PARENT}}
+{
+   {{^}}
+}
+@end
+----
+bind "i"
+
+template implementation :blank :indent
+"Template to implement a class."
+sectiondictionary "NOTHEADER"
+----
+@implementation {{?NAME}} ({{?CLASS_CATEGORY}})
+{{^}}
+@end
+----
+bind "p"
+
+template function :blank :indent
+"Template to declare a function."
+----
+----
+bind "f"
+
+template variable :blank :indent
+"Template to declare a variable."
+----
+----
+bind "v"

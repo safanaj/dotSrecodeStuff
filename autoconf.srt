@@ -1,0 +1,86 @@
+set mode "autoconf-mode"
+set priority "40"
+
+set comment_start  ""
+set comment_end    ""
+set comment_prefix "#"
+
+
+context code
+
+template pkgconfigcheckmodules :blank
+""
+----
+PKG_CHECK_MODULES([{{?VARNAME}}],[{{?MODS-LIST}}])
+----
+
+
+template acinit :user :blank
+""
+----
+AC_PREREQ([{{?ACVERSION}}])
+AC_INIT([{{?PACKAGENAME}}], [{{?VERSION}}], [{{?EMAIL}}])
+----
+
+template aminit :blank
+""
+----
+AM_INIT_AUTOMAKE([{{?AMOPTS}}])
+----
+
+template acoutputconfigfiles :blank
+""
+----
+AC_CONFIG_FILES([{{?CONFIG-FILES-OUTPUT}}])
+AC_OUTPUT
+----
+
+template standardacfile :blank
+""
+----
+{{>code:acinit}}
+{{>code:aminit}}
+{{>code:acoutpuconfigfiles}}
+----
+
+
+context file
+
+template initialexample :file :user :time :blank
+"A simple start point"
+----
+#                                               -*- Autoconf -*-
+# This template is inspired from autowritten example by autoscan
+# Please using `autoscan' you could be more satisfied
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.64])
+AC_INIT([{{?PACKAGENAME}}], [{{?VERSION}}], [{{?BUG-REPORT-ADDRESS}}])
+AM_INIT_AUTOMAKE([{{?AMOPTS}}])
+dnlAC_CONFIG_SRCDIR([{{?FILE-TO-CHECK-SOURCE-DIR}}])
+AC_CONFIG_HEADERS([config.h])
+
+# Checks for programs.
+AC_PROG_CC
+dnlPKG_PROG_PKG_CONFIG
+
+# Checks for libraries.
+dnlPKG_CHECK_MODULES([DEPMODS], [glib-2.0 gio-2.0 gio-unix-2.0])
+
+# Checks for header files.
+dnlAC_CHECK_HEADERS([stdlib.h string.h unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+dnlAC_TYPE_SIZE_T
+dnlAC_TYPE_SSIZE_T
+
+# Checks for library functions.
+dnlAC_FUNC_MALLOC
+dnlAC_CHECK_FUNCS([memset select socket strerror])
+
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+----
+
+

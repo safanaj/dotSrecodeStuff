@@ -1,0 +1,246 @@
+;; rules_for_debian.srt --- debian/rules
+
+;; Copyright (C) 2008 Marco <Bj> Bardelli
+
+;; Author: Marco <Bj> Bardelli <bardelli.marco@gmail.com>
+
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or (at
+;; your option) any later version.
+
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program; see the file COPYING.  If not, write to
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
+set mode "makefile-mode"
+;; set mode "makefile-gmake-mode"
+set comment_start  "#"
+set comment_prefix "#"
+;; set application "document"
+set priority "51"
+
+;; set HEADEREXT ".h"
+context declaration
+
+template debianstuff :blank
+""
+----
+DH_VERBOSE=1
+
+DEB_BUILD_OPTIONS_PARALLEL ?= $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+MAKEFLAGS += $(if $(DEB_BUILD_OPTIONS_PARALLEL),-j$(DEB_BUILD_OPTIONS_PARALLEL))
+
+DEB_HOST_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+DEB_HOST_ARCH  ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+----
+;;bind
+
+template compileflags :blank
+""
+----
+CFLAGS += -Wall -g -O$(if $(findstring noopt,$(DEB_BUILD_OPTIONS)),0,2)
+
+# Ensure the build aborts when there are still references to undefined
+# symbols
+LDFLAGS += -Wl,-z,defs
+
+# Make the linker work a bit harder so dynamic loading can be done faster
+LDFLAGS += -Wl,-O1
+
+----
+
+template dirstuff :blank
+""
+----
+
+CURDIR	?= `pwd`
+d_deb	?= $(CURDIR)/debian
+d_tmp	?= $(d_deb)/tmp
+
+## multi configuration building
+#BUILDDIR = $(BUILDBASEDIR)/$*
+builddir = $(buildbasedir)
+buildbasedir = $(CURDIR)/debian/build
+
+----
+
+
+template buildingstuff :blank
+""
+----
+## to still CURDIR clean
+MAKE_BUILD = $(MAKE) -C $(builddir)
+
+## Building and configuration flags
+## prepended to MAKE command building
+#BUILDING_FLAGS = "CFLAGS=$(CFLAGS) LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) ..."
+
+----
+
+template configurestuff :blank
+""
+----
+# Customization stuff
+RUNCONFIGURE_BUILDDIR_WITHLOG = $(RUNCONFIGURE_BUILDDIR) \
+			      	| tee $(d_deb)/CONFIGURE.$(CONFNUM)
+RUNCONFIGURE_BUILDDIR = cd $(builddir) && $(RUNCONFIGURE)
+RUNCONFIGURE = $(CURDIR)/configure $(CONFIGURE_OPTS)
+CONFNUM = $(shell ls $(d_deb)/CONFIGURE.* -1 2>/dev/null | wc -l)
+
+CONFIGURE_OPTS = -C --srcdir=$(CURDIR) --prefix=/where/to/install
+
+$(d_deb)/CONFIG-HELP:
+	-./configure --help > $@
+
+----
+
+prompt PORTABLESH "Specify a command to autogen stuff: " default "./autogen.sh"
+prompt SCRIPTOPTS "Configuration options: " default "$(CONFIGURE_OPTS)"
+prompt GREPLOG "Test first line in debian/changelog: " default "grep `git describe` "
+template preparerule :blank
+""
+----
+prepare: $(CURDIR)/debian/prepare-stamp
+$(CURDIR)/debian/prepare-stamp: {{?PORTABLESH}}
+	( head -n 1 | {{?GREPLOG}} {{^}} ) || \
+	  ( echo "Please check debian/cheangelog and prepare tree." ; exit 3 )
+	-{{PORTABLESH}} {{?SCRIPTOPTS}}
+	touch $@
+
+----
+
+template cleaningrules
+""
+----
+config-clean:
+	dh_testdir
+	dh_testroot
+
+	if [ -f config.sub.backup ]; then \
+		mv -fv config.sub.backup config.sub; \
+	fi
+
+	if [ -f config.guess.backup ]; then \
+		mv -fv config.guess.backup config.guess; \
+	fi
+
+	$(RM) config-stamp
+
+distclean:
+#	# touch config.status to prevent execution of autoconf
+	[ ! -f $(builddir)/Makefile ] || ( touch $(builddir)/config.status \
+	  && $(MAKE_BUILD) distclean )
+
+----
+
+template dh_configure
+""
+----
+
+override_dh_auto_configure: $(d_deb)/CONFIG-HELP
+	-mkdir -p $(builddir)
+	$(RUNCONFIGURE_BUILDDIR_WITHLOG)
+	-cp $(builddir)/config.log $(d_deb)/CONFIG.log.$(CONFNUM)
+
+----
+
+template dhrules
+""
+----
+
+override_dh_auto_configure: $(d_deb)/CONFIG-HELP
+	-mkdir -p $(builddir)
+	cd $(builddir) && \
+		$(CURDIR)/configure $(CONFIGURE_OPTS) \
+			| tee $(d_deb)/CONFIGURE.$(CONFNUM)
+	-cp $(builddir)/config.log $(d_deb)/CONFIG.log.$(CONFNUM)
+
+
+override_dh_auto_build:
+	$(MAKE_BUILD)
+
+override_dh_auto_test:
+	( head -n 1 debian/changelog | \
+	  grep `git describe` | grep ^$(PKG) ) || \
+		echo "** Check debian/changelog"
+
+override_dh_auto_install:
+	$(MAKE_BUILD) install DESTDIR=$(d_tmp)
+
+
+# Standard targets
+# ... these could be probably '%:' target and 'dh $@' rule
+##  %:
+##     dh $@
+clean build:
+	dh $@
+
+install: build
+	dh $@
+
+binary-arch binary-indep: install
+	dh $@
+
+binary: binary-arch binary-indep
+
+.PHONY: clean build install binary-arch binary-indep binary
+
+----
+
+
+context file
+
+template debian-rules-microstuff :file :user :time :make
+"Fill out an debian/rules file for a package."
+----
+#!/usr/bin/make -f
+d_deb=$(CURDIR)/debian
+d_tmp=$(d_deb)/tmp
+d_pkg=$(d_deb)/{{?NAME}}-dev
+d_log=$(d_pkg).debhelper.log
+
+CONFIGURE_OPTS = -C --prefix=/usr
+
+# overrides rules
+override_dh_auto_configure:
+
+override_dh_auto_build:
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+
+override_dh_auto_install:
+
+%:
+	dh $@
+
+binary: binary-arch binary-indep
+.PHONY: clean build install binaty-arch binary-indep binary
+
+----
+;;bind "r"
+
+template debianrules :file :user :time :make
+"Fill out an debian/rules file for a package."
+----
+#!/usr/bin/make -f
+{{>:debianstuff}}
+{{>:compileflags}}
+{{>:buildingstuff}}
+{{>:configurestuff}}
+{{>:preparerule}}
+{{>:dhrules}}
+----
+;;bind "r"
+
